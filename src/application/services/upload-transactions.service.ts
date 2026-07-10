@@ -39,7 +39,7 @@ export class UploadTransactionsService implements UploadTransactionsUseCase {
     const groups = new Map<string, Transaction[]>();
     for (const t of clean) {
       const [y, m] = t.transactionDate.split('-');
-      const prefix = `transactions/${y}/${m}/${t.partnerId}`;
+      const prefix = `${y}/${m}/${t.partnerId}`;
       (groups.get(prefix) ?? groups.set(prefix, []).get(prefix)!).push(t);
     }
     for (const [prefix, txns] of groups) {
@@ -49,7 +49,7 @@ export class UploadTransactionsService implements UploadTransactionsUseCase {
     }
 
     const manifest = {
-      batchId, validRows: clean.length, rejectedRows: errors.length,
+      batchId, validRows: clean.length, rejectedRows: new Set(errors.map((e) => e.row)).size,
       flaggedRows: flagged.length, errors, processedAt, sourceSha256,
     };
     await this.storage.putObject(`manifests/${batchId}.manifest.json`, Buffer.from(JSON.stringify(manifest, null, 2)), 'application/json');
