@@ -12,6 +12,9 @@ export function enumerateDates(from: string, to: string): string[] {
   return out;
 }
 
+// Callers must pre-filter `transactions` to the [from, to] range before calling this
+// function (the Postgres repository does this); transactions outside the range would
+// inflate summary totals without appearing in daily_breakdown.
 export function calculateSettlement(input: {
   partnerId: string; partnerName: string; from: string; to: string; transactions: Transaction[];
 }): Settlement {

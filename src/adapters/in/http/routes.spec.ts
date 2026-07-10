@@ -21,7 +21,7 @@ function makeApp(overrides: { upload?: Partial<UploadTransactionsUseCase>; settl
       daily_breakdown: [{ date: '2026-07-01', transactions: 1, points_earned: 150, points_redeemed: 0 }],
     })),
   };
-  return buildApp({ upload, settlement });
+  return buildApp({ upload, settlement, logger: false });
 }
 
 describe('routes', () => {
