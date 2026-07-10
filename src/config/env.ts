@@ -9,6 +9,8 @@ const schema = z.object({
   GLUE_DATABASE: z.string().default('fincard_loyalty'),
   GLUE_TABLE: z.string().default('transactions'),
   MAX_UPLOAD_BYTES: z.coerce.number().default(10 * 1024 * 1024),
+  CATALOG_MODE: z.enum(['file', 'glue']).default('file'),
+  CATALOG_FILE: z.string().default('./data/catalog/catalog.json'),
 });
 
 export interface AppConfig {
@@ -20,6 +22,8 @@ export interface AppConfig {
   glueDatabase: string;
   glueTable: string;
   maxUploadBytes: number;
+  catalogMode: 'file' | 'glue';
+  catalogFile: string;
 }
 
 export function parseEnv(env: NodeJS.ProcessEnv): AppConfig {
@@ -33,6 +37,8 @@ export function parseEnv(env: NodeJS.ProcessEnv): AppConfig {
     glueDatabase: p.GLUE_DATABASE,
     glueTable: p.GLUE_TABLE,
     maxUploadBytes: p.MAX_UPLOAD_BYTES,
+    catalogMode: p.CATALOG_MODE,
+    catalogFile: p.CATALOG_FILE,
   };
 }
 

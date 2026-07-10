@@ -31,8 +31,8 @@ consultable en Postgres para servir las liquidaciones de forma eficiente.
 | Parseo de CSV | `csv-parse` |
 | Query store | Postgres 16 + Kysely (query builder tipado) + `pg` |
 | Data lake | AWS S3 (objetos NDJSON) |
-| Catálogo de datos | AWS Glue Data Catalog |
-| Emulación local de AWS | LocalStack 3 (`s3`, `glue`) |
+| Catálogo de datos | AWS Glue Data Catalog (prod) / catálogo local en JSON (dev, ver ADR-0003) |
+| Emulación local de AWS | LocalStack 3 (`s3`) |
 | Testing | Vitest (unitarias) + Testcontainers (integración, Postgres real vía Docker) |
 | Infraestructura | Docker Compose (desarrollo local); Terraform (IaC, entregado en una fase posterior) |
 
@@ -65,7 +65,8 @@ flowchart LR
 `multipart/form-data` → el caso de uso parsea el CSV, valida cada fila (`field-validator`)
 y aplica las reglas de negocio RN-01..RN-04 (`business-rules`) → las filas limpias se
 escriben en S3 particionadas por `{year}/{month}/{partner_id}` como NDJSON, se registra
-un manifiesto en `manifests/`, se registra/actualiza la tabla en Glue Data Catalog, y se
+un manifiesto en `manifests/`, se registra/actualiza la tabla en el catálogo de datos
+(Glue en producción; un catálogo local en JSON en desarrollo, ver ADR-0003), y se
 persisten en Postgres (`transactions` para las limpias, `transactions_flagged` para las
 marcadas).
 
@@ -82,7 +83,8 @@ desglose diario, y aplica la regla de neto no-negativo hacia afuera.
 ## Cómo correr el proyecto localmente
 
 ```bash
-# 1. Levantar Postgres + LocalStack (S3 + Glue emulados)
+# 1. Levantar Postgres + LocalStack (S3 emulado; Glue no está disponible en la edición
+#    community de LocalStack, ver más abajo)
 docker compose up -d
 
 # 2. Copiar variables de entorno
@@ -105,6 +107,8 @@ Variables relevantes de `.env.example`:
 | `AWS_REGION`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` | Credenciales AWS (dummy `test`/`test` para LocalStack) |
 | `AWS_ENDPOINT_URL` | `http://localhost:4566` en desarrollo (LocalStack); se omite/apunta a AWS real en producción |
 | `S3_BUCKET`, `GLUE_DATABASE`, `GLUE_TABLE` | Recursos del data lake |
+| `CATALOG_MODE` | `file` (default) usa un catálogo local en JSON (emulador de Glue para desarrollo, ya que Glue es una feature de LocalStack Pro); `glue` usa el SDK real de AWS Glue (producción / LocalStack Pro / AWS real) |
+| `CATALOG_FILE` | Ruta del archivo JSON del catálogo local cuando `CATALOG_MODE=file` (default `./data/catalog/catalog.json`) |
 | `MAX_UPLOAD_BYTES` | Límite de tamaño del CSV subido (bytes) |
 
 ## Endpoints de la API
@@ -180,7 +184,9 @@ Health check simple: `{ "status": "ok" }`.
 npm test
 
 # Integración (requiere Docker corriendo — usa Testcontainers para levantar
-# Postgres real y validar repositorios/migraciones)
+# Postgres y S3 (LocalStack) reales y validar repositorios/adaptadores/migraciones)
+# La suite de GlueCatalog se omite por defecto (Glue no existe en LocalStack community);
+# para correrla contra LocalStack Pro o AWS real: RUN_GLUE_IT=1 npm run test:int
 npm run test:int
 
 # Cobertura
@@ -231,13 +237,14 @@ npm run lint
 
 ### Limitaciones conocidas
 
-1. **La tabla `transactions` de Glue está registrada solo con columnas** (sin
+1. **La tabla `transactions` del catálogo está registrada solo con columnas** (sin
    `PartitionKeys`, `Location` ni `SerDe`), por lo que cataloga el esquema pero no queda
    cableada para consultas en vivo de Athena sobre el data lake NDJSON. La Query 2 de
    [`queries/optimization.sql`](./queries/optimization.sql) apunta a una tabla de
    analítica separada (`transactions_parquet`) que representa la capa analítica prevista
    a futuro. El registro completo de particiones queda fuera de alcance para este
-   ejercicio de 2 días.
+   ejercicio de 2 días. Esto aplica tanto al catálogo real (Glue, `CATALOG_MODE=glue`)
+   como a su emulación local (`CATALOG_MODE=file`, ver ADR-0003).
 2. **La existencia de aliado/miembro no se valida en el upload**, solo se valida el
    formato vía regex. Un `partner_id` bien formado pero inexistente (por ejemplo,
    `PART99`) se almacena sin error y recién devuelve 404 al momento de consultar la
