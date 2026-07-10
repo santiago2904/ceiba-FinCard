@@ -18,15 +18,15 @@ describe('applyBusinessRules', () => {
     const { flagged } = applyBusinessRules([t({ transactionId: 'A', transactionDate: '2024-01-01' })], NOW);
     expect(flagged[0].flagReason).toBe('RN-04');
   });
-  it('RN-01 flags txns after cumulative net exceeds 10000 for a member/day', () => {
+  it('RN-01 flags the breaching txn and all subsequent txns for a member/day', () => {
     const txns = [
       t({ transactionId: 'A', pointsEarned: 9000 }),
       t({ transactionId: 'B', pointsEarned: 2000 }),
       t({ transactionId: 'C', pointsEarned: 500 }),
     ];
     const { clean, flagged } = applyBusinessRules(txns, NOW);
-    expect(clean.map((x) => x.transactionId)).toEqual(['A', 'B']);
-    expect(flagged.map((x) => [x.transactionId, x.flagReason])).toEqual([['C', 'RN-01']]);
+    expect(clean.map((x) => x.transactionId)).toEqual(['A']);
+    expect(flagged.map((x) => [x.transactionId, x.flagReason])).toEqual([['B', 'RN-01'], ['C', 'RN-01']]);
   });
   it('RN-03 flags the 6th+ txn for same member/partner/day', () => {
     const txns = Array.from({ length: 7 }, (_, i) => t({ transactionId: `T${i}`, pointsEarned: 1 }));
