@@ -13,6 +13,7 @@
     "dev": "tsx watch src/main.ts",
     "start": "node dist/main.js",
     "test:watch": "vitest",
+    "test:int": "vitest run --config vitest.int.config.ts",
     "coverage": "vitest run --coverage",
     "lint": "eslint src"
   },
@@ -45,6 +46,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@testcontainers/postgresql": "^10.28.0",
     "@types/node": "^20.19.43",
     "@types/pg": "^8.20.0",
     "@typescript-eslint/eslint-plugin": "^8.63.0",
