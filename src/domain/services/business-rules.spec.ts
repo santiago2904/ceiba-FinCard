@@ -12,11 +12,11 @@ describe('applyBusinessRules', () => {
   it('RN-04 flags future dates', () => {
     const { clean, flagged } = applyBusinessRules([t({ transactionId: 'A', transactionDate: '2027-01-01' })], NOW);
     expect(clean).toHaveLength(0);
-    expect(flagged[0].flagReason).toBe('RN-04');
+    expect(flagged[0]!.flagReason).toBe('RN-04');
   });
   it('RN-04 flags dates older than 2 years', () => {
     const { flagged } = applyBusinessRules([t({ transactionId: 'A', transactionDate: '2024-01-01' })], NOW);
-    expect(flagged[0].flagReason).toBe('RN-04');
+    expect(flagged[0]!.flagReason).toBe('RN-04');
   });
   it('RN-01 flags the breaching txn and all subsequent txns for a member/day', () => {
     const txns = [
@@ -45,8 +45,8 @@ describe('applyBusinessRules', () => {
     const txns = [...redeemers, ...earners];
     const { clean, flagged } = applyBusinessRules(txns, NOW);
     expect(flagged).toHaveLength(1);
-    expect(flagged[0].transactionId).toBe('R4');
-    expect(flagged[0].flagReason).toBe('RN-02');
+    expect(flagged[0]!.transactionId).toBe('R4');
+    expect(flagged[0]!.flagReason).toBe('RN-02');
     expect(clean).toHaveLength(9);
   });
   it('RN-01 keeps flagging subsequent txns even if a later redemption drops net below the limit', () => {
