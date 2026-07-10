@@ -28,7 +28,9 @@ SELECT
   SUM(t.points_redeemed)                                AS total_redeemed,
   SUM(t.points_earned) - SUM(t.points_redeemed)         AS net_owed
 FROM transactions t
-WHERE t.transaction_date >= DATEADD(month, -12, DATE_TRUNC('month', CURRENT_DATE))
+-- Ventana móvil de 12 meses (mes actual inclusive + 11 meses previos):
+-- -11, no -12, para no arrastrar un 13er mes.
+WHERE t.transaction_date >= DATEADD(month, -11, DATE_TRUNC('month', CURRENT_DATE))
 GROUP BY t.partner_id, t.partner_name, TO_CHAR(t.transaction_date, 'YYYY-MM')
 ORDER BY t.partner_id, year_month;
 
@@ -53,8 +55,12 @@ FROM fincard_loyalty.transactions_parquet
 -- ---- Predicados de partition pruning: SIEMPRE filtrar por las claves de
 -- ---- partición (year, month, partner_id) para que Athena descarte
 -- ---- carpetas completas en S3 antes de leer un solo byte de datos.
-WHERE year  BETWEEN '2025' AND '2026'          -- poda de particiones (partition pruning)
-  AND   month BETWEEN '01'  AND '12'
+-- ---- year/month son STRING en el catálogo de Glue; como 'YYYY-MM' ordena
+-- ---- lexicográficamente igual que temporalmente, comparar concat(year,'-',month)
+-- ---- contra el límite inferior de la ventana sigue permitiendo partition
+-- ---- pruning y además reproduce la MISMA ventana móvil de 12 meses
+-- ---- (mes actual inclusive + 11 previos) que la Consulta 1.
+WHERE concat(year, '-', month) >= date_format(date_add('month', -11, date_trunc('month', current_date)), '%Y-%m')
   -- AND partner_id = 'PART01'                 -- añadir si se liquida un aliado puntual
 GROUP BY partner_id, partner_name, year, month
 ORDER BY partner_id, year_month;
@@ -137,6 +143,9 @@ WITH monthly AS (
   FROM transactions
   GROUP BY partner_id, partner_name, DATE_TRUNC('month', transaction_date)
 ),
+-- LAG() devuelve el mes anterior CON DATOS por aliado, no el mes calendario
+-- inmediatamente anterior: si un aliado tiene un mes sin transacciones, se
+-- comparará contra el último mes que sí tuvo datos, saltándose el hueco.
 with_prev AS (
   SELECT
     partner_id, partner_name, month, net,
