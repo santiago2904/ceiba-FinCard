@@ -1,0 +1,6 @@
+transaction_id,member_id,partner_id,points_earned,points_redeemed,transaction_date,partner_name
+TXN101,MEMBAD,PART01,100,0,2026-07-01,Café Central
+TXN102,MEM01,PARTX,100,0,2026-07-01,Café Central
+TXN103,MEM6,PART02,-10,0,2026-07-01,Gasolinera Express
+TXN104,MEM003,PART3,100,0,2026-07-32,Tienda Moda
+TXN105,,PART01,100,0,2026-07-01,Café Central
