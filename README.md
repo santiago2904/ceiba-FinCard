@@ -229,6 +229,23 @@ npm run lint
    `total_points_earned - total_points_redeemed` en el mismo payload, para no ocultar la
    información pero sí evitar que FinCard "le deba puntos negativos" a un aliado.
 
+### Limitaciones conocidas
+
+1. **La tabla `transactions` de Glue está registrada solo con columnas** (sin
+   `PartitionKeys`, `Location` ni `SerDe`), por lo que cataloga el esquema pero no queda
+   cableada para consultas en vivo de Athena sobre el data lake NDJSON. La Query 2 de
+   [`queries/optimization.sql`](./queries/optimization.sql) apunta a una tabla de
+   analítica separada (`transactions_parquet`) que representa la capa analítica prevista
+   a futuro. El registro completo de particiones queda fuera de alcance para este
+   ejercicio de 2 días.
+2. **La existencia de aliado/miembro no se valida en el upload**, solo se valida el
+   formato vía regex. Un `partner_id` bien formado pero inexistente (por ejemplo,
+   `PART99`) se almacena sin error y recién devuelve 404 al momento de consultar la
+   liquidación (`GET /api/v1/settlements/:partnerId`).
+3. **`partner_name` se toma tal cual viene en el CSV**, no se resuelve contra el seed de
+   `partners`, por lo que puede diferir del nombre que sí se resuelve desde el seed en el
+   encabezado de la respuesta de liquidación.
+
 ## Documentación adicional
 
 - [DESIGN.md](./DESIGN.md) — capas, pipeline ETL, modelo de datos, reglas de negocio, manejo de errores, estrategia de pruebas.

@@ -7,8 +7,8 @@ import { registerErrorHandler } from './errors.js';
 import type { UploadTransactionsUseCase } from '../../../application/ports/in/upload-transactions.usecase.js';
 import type { GetSettlementUseCase } from '../../../application/ports/in/get-settlement.usecase.js';
 
-export function buildApp(deps: { upload: UploadTransactionsUseCase; settlement: GetSettlementUseCase; maxUploadBytes?: number }): FastifyInstance {
-  const app = Fastify({ logger: true });
+export function buildApp(deps: { upload: UploadTransactionsUseCase; settlement: GetSettlementUseCase; maxUploadBytes?: number; logger?: boolean }): FastifyInstance {
+  const app = Fastify({ logger: deps.logger ?? true });
   app.register(helmet);
   app.register(rateLimit, { max: 100, timeWindow: '1 minute' });
   app.register(multipart, { limits: { fileSize: deps.maxUploadBytes ?? 10 * 1024 * 1024, files: 1 } });
