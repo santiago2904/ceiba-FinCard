@@ -33,13 +33,16 @@ export function applyBusinessRules(txns: Transaction[], now: Date): { clean: Tra
     redeemers.slice(allowed).forEach((t) => setIfAbsent(t.transactionId, 'RN-02'));
   }
 
-  // RN-01: per (member, day), cumulative net. The breaching txn (the one whose addition
-  // pushes cumulative net above the limit) and all subsequent txns in the group are flagged.
+  // RN-01: per (member, day), cumulative net. Once cumulative net first exceeds the limit,
+  // the breaching txn AND every subsequent txn in the group are flagged, unconditionally
+  // (even if a later redemption brings the net back down).
   for (const group of groupBy(txns, (t) => `${t.memberId}|${t.transactionDate}`).values()) {
     let net = 0;
+    let breached = false;
     for (const t of [...group].sort((a, b) => a.transactionId.localeCompare(b.transactionId))) {
       net += t.pointsEarned - t.pointsRedeemed;
-      if (net > DAILY_NET_LIMIT) setIfAbsent(t.transactionId, 'RN-01');
+      if (net > DAILY_NET_LIMIT) breached = true;
+      if (breached) setIfAbsent(t.transactionId, 'RN-01');
     }
   }
 
