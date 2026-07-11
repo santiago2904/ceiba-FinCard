@@ -15,7 +15,7 @@ export class GlueCatalog implements DataCatalogPort {
   }
   async ensureDatabase(name: string): Promise<void> {
     try { await this.client.send(new CreateDatabaseCommand({ DatabaseInput: { Name: name } })); }
-    catch (e: any) { if (e?.name !== 'AlreadyExistsException') throw e; }
+    catch (e: unknown) { if ((e as { name?: string }).name !== 'AlreadyExistsException') throw e; }
   }
   async upsertTable(db: string, table: string, columns: GlueColumn[]): Promise<void> {
     const TableInput = { Name: table, StorageDescriptor: { Columns: columns.map((c) => ({ Name: c.name, Type: c.type })) } };
