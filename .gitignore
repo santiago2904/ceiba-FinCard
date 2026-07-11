@@ -153,3 +153,6 @@ terraform/crash.log
 
 # Local FileDataCatalog emulator runtime state (CATALOG_MODE=file)
 /data/catalog/
+
+# Artefactos internos de planificación (solo local)
+docs/superpowers/
