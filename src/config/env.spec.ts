@@ -8,6 +8,6 @@ describe('parseEnv', () => {
     expect(cfg.s3Bucket).toBe('b');
   });
   it('throws on missing DATABASE_URL', () => {
-    expect(() => parseEnv({ PORT: '3000' } as any)).toThrow();
+    expect(() => parseEnv({ PORT: '3000' } as NodeJS.ProcessEnv)).toThrow();
   });
 });
