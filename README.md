@@ -18,6 +18,7 @@ consultable en Postgres para servir las liquidaciones de forma eficiente.
 - [Endpoints de la API](#endpoints-de-la-api)
 - [Pruebas](#pruebas)
 - [Build](#build)
+- [Despliegue en AWS (IaC)](#despliegue-en-aws-iac)
 - [Supuestos documentados](#supuestos-documentados)
 - [Documentación adicional](#documentación-adicional)
 
@@ -201,6 +202,40 @@ npm start        # corre el build compilado (node dist/main.js)
 npm run typecheck
 npm run lint
 ```
+
+## Despliegue en AWS (IaC)
+
+La infraestructura de despliegue está **completa y validada como código** en
+[`terraform/`](./terraform) (`terraform validate` y `terraform fmt` pasan). Provisiona
+ECS Fargate detrás de un ALB, RDS Postgres 16, S3, ECR, VPC con subredes públicas/privadas,
+IAM *least-privilege* y credenciales en Secrets Manager. Los pasos de despliegue están en
+[`terraform/README.md`](./terraform/README.md).
+
+> **Nota:** El despliegue en vivo **no se dejó ejecutado a propósito, por costo.** Levantar
+> este stack incurre en cargos continuos de AWS (NAT Gateway, ALB, RDS y Fargate ≈ **$70–80
+> USD/mes** si se deja encendido). La solución **queda lista para desplegar**: basta con tener
+> credenciales de AWS configuradas (`aws configure` / SSO) y ejecutar el flujo documentado.
+
+Resumen del flujo (detalle en [`terraform/README.md`](./terraform/README.md)):
+
+```bash
+cd terraform
+export TF_VAR_db_password="<contraseña-fuerte>"
+terraform init && terraform apply                 # crea VPC, ECR, S3, RDS, ECS+ALB
+
+ECR_URL=$(terraform output -raw ecr_repository_url)
+aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "${ECR_URL%/*}"
+docker build -t "$ECR_URL:latest" .. && docker push "$ECR_URL:latest"
+aws ecs update-service --cluster fincard-cluster --service fincard-app --force-new-deployment
+
+curl "http://$(terraform output -raw alb_dns_name)/health"   # URL pública desplegada
+
+terraform destroy                                 # ⚠️ ejecutar al terminar para no seguir pagando
+```
+
+En producción, la app usa S3 y Glue **reales** (sin LocalStack): se establece
+`CATALOG_MODE=glue` y no se define `AWS_ENDPOINT_URL`, por lo que los mismos adaptadores del
+SDK apuntan a los servicios reales de AWS.
 
 ## Supuestos documentados
 
